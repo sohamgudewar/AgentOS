@@ -10,7 +10,9 @@ class Settings(BaseSettings):
     app_name: str = "AgentOS"
     app_version: str = "0.1.0"
     environment: str = "development"
-
+    jwt_secret_key: str = "SECRET_KEY"
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 30
     database_url: str = "DATABASE_URL"
 
     model_config = SettingsConfigDict(
