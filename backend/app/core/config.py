@@ -10,9 +10,11 @@ class Settings(BaseSettings):
     app_name: str = "AgentOS"
     app_version: str = "0.1.0"
     environment: str = "development"
-    
+
+    database_url: str = "DATABASE_URL"
+
     model_config = SettingsConfigDict(
-        env_file=".env", 
+        env_file=".env",
         extra="ignore",
     )
 
