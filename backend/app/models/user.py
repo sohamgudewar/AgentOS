@@ -73,3 +73,11 @@ class User(Base, TimestampMixin):
         nullable=False,
         default=UserRole.VIEWER.value,
     )
+    name: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+    )
+
+    is_active: Mapped[bool] = mapped_column(
+        default=True,
+    )
