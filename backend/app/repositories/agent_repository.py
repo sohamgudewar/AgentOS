@@ -51,3 +51,23 @@ class AgentRepository:
         )
 
         return list(result.scalars().all())
+
+    async def update_agent(
+        self,
+        agent: Agent,
+    ) -> Agent:
+        """Update an existing agent."""
+
+        await self.db.commit()
+        await self.db.refresh(agent)
+
+        return agent
+
+    async def delete_agent(
+        self,
+        agent: Agent,
+    ) -> None:
+        """Delete an existing agent."""
+
+        await self.db.delete(agent)
+        await self.db.commit()
