@@ -30,7 +30,7 @@ import uuid
 from enum import Enum
 
 from sqlalchemy import String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 
 from app.database.base import Base
@@ -80,4 +80,10 @@ class User(Base, TimestampMixin):
 
     is_active: Mapped[bool] = mapped_column(
         default=True,
+    )
+
+    agents = relationship(
+        "Agent",
+        back_populates="owner",
+        cascade="all, delete-orphan",
     )
