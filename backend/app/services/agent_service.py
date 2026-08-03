@@ -1,10 +1,32 @@
+# AgentService
+#       │
+#       ├── AgentRepository
+#       ├── ConversationRepository
+#       └── MessageRepository
+
+# The service will become the orchestrator:
+
+# Find the agent.
+# Create or load a conversation.
+# Save the user's message.
+# Load conversation history.
+# Send history to Gemini.
+# Save Gemini's reply.
+# Return the response.
+
 from uuid import UUID
 
+from app.models.message import Message
+from app.models.conversation import Conversation
 from app.models.agent import Agent
 from app.models.user import User
 from app.repositories.agent_repository import AgentRepository
-from app.schemas.agent import AgentCreate
-from app.schemas.agent import AgentUpdate
+from app.schemas.agent import AgentCreate, AgentUpdate
+
+from app.llm.gemini_provider import GeminiProvider
+from app.llm.service import LLMService
+from app.repositories.conversation_repository import ConversationRepository
+from app.repositories.message_repository import MessageRepository
 
 
 class AgentService:
@@ -13,8 +35,12 @@ class AgentService:
     def __init__(
         self,
         agent_repository: AgentRepository,
+        conversation_repository: ConversationRepository,
+        message_repository: MessageRepository,
     ):
         self.agent_repository = agent_repository
+        self.conversation_repository = conversation_repository
+        self.message_repository = message_repository
 
     async def create_agent(
         self,
@@ -99,84 +125,117 @@ class AgentService:
 
         await self.agent_repository.delete_agent(agent)
 
+    async def chat_with_agent(
+        self,
+        agent_id: UUID,
+        message: str,
+        current_user: User,
+        conversation_id: UUID | None = None,
+    ) -> tuple[UUID, str]:
+        """Chat with an AI agent, while maintaining conversation history."""
 
-# # recent error
-# (backend) PS C:\Users\soham\OneDrive\Desktop\AgentOS\backend> uv run uvicorn app.main:app --reload
-# INFO:     Will watch for changes in these directories: ['C:\\Users\\soham\\OneDrive\\Desktop\\AgentOS\\backend']
-# INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
-# INFO:     Started reloader process [18572] using StatReload
-# 2026-08-01 11:45:41 | INFO     | app.main:<module>:16 - AgentOS backend app is starting...
-# INFO:     Started server process [14956]
-# INFO:     Waiting for application startup.
-# INFO:     Application startup complete.
-# INFO:     127.0.0.1:53212 - "GET /docs HTTP/1.1" 200 OK
-# INFO:     127.0.0.1:53212 - "GET /openapi.json HTTP/1.1" 200 OK
-# INFO:     127.0.0.1:63226 - "POST /api/v1/auth/login HTTP/1.1" 200 OK
-# INFO:     127.0.0.1:58993 - "PUT /api/v1/agents/6c75760c-b85e-411f-b194-6d39cfe6ab37 HTTP/1.1" 500 Internal Server Error
-# ERROR:    Exception in ASGI application
-# Traceback (most recent call last):
-#   File "C:\Users\soham\OneDrive\Desktop\AgentOS\backend\.venv\Lib\site-packages\uvicorn\protocols\http\h11_impl.py", line 416, in run_asgi
-#     result = await app(  # type: ignore[func-returns-value]
-#              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-#   File "C:\Users\soham\OneDrive\Desktop\AgentOS\backend\.venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 63, in __call__
-#     return await self.app(scope, receive, send)
-#            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-#   File "C:\Users\soham\OneDrive\Desktop\AgentOS\backend\.venv\Lib\site-packages\fastapi\applications.py", line 1163, in __call__
-#     await super().__call__(scope, receive, send)
-#   File "C:\Users\soham\OneDrive\Desktop\AgentOS\backend\.venv\Lib\site-packages\starlette\applications.py", line 90, in __call__
-#     await self.middleware_stack(scope, receive, send)
-#   File "C:\Users\soham\OneDrive\Desktop\AgentOS\backend\.venv\Lib\site-packages\starlette\middleware\errors.py", line 186, in __call__
-#     raise exc
-#   File "C:\Users\soham\OneDrive\Desktop\AgentOS\backend\.venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
-#     await self.app(scope, receive, _send)
-#   File "C:\Users\soham\OneDrive\Desktop\AgentOS\backend\.venv\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
-#     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-#   File "C:\Users\soham\OneDrive\Desktop\AgentOS\backend\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-#     raise exc
-#   File "C:\Users\soham\OneDrive\Desktop\AgentOS\backend\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-#     await app(scope, receive, sender)
-#   File "C:\Users\soham\OneDrive\Desktop\AgentOS\backend\.venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
-#     await self.app(scope, receive, send)
-#   File "C:\Users\soham\OneDrive\Desktop\AgentOS\backend\.venv\Lib\site-packages\starlette\routing.py", line 660, in __call__
-#     await self.middleware_stack(scope, receive, send)
-#   File "C:\Users\soham\OneDrive\Desktop\AgentOS\backend\.venv\Lib\site-packages\fastapi\routing.py", line 2683, in app
-#     await route.handle(scope, receive, send)
-#   File "C:\Users\soham\OneDrive\Desktop\AgentOS\backend\.venv\Lib\site-packages\fastapi\routing.py", line 1753, in handle
-#     await self.original_router.handle(scope, receive, send)
-#   File "C:\Users\soham\OneDrive\Desktop\AgentOS\backend\.venv\Lib\site-packages\fastapi\routing.py", line 2738, in handle
-#     await included_router._handle_selected(scope, receive, send)
-#   File "C:\Users\soham\OneDrive\Desktop\AgentOS\backend\.venv\Lib\site-packages\fastapi\routing.py", line 1764, in _handle_selected
-#     await route.handle(scope, receive, send)
-#   File "C:\Users\soham\OneDrive\Desktop\AgentOS\backend\.venv\Lib\site-packages\fastapi\routing.py", line 1753, in handle
-#     await self.original_router.handle(scope, receive, send)
-#   File "C:\Users\soham\OneDrive\Desktop\AgentOS\backend\.venv\Lib\site-packages\fastapi\routing.py", line 2738, in handle
-#     await included_router._handle_selected(scope, receive, send)
-#   File "C:\Users\soham\OneDrive\Desktop\AgentOS\backend\.venv\Lib\site-packages\fastapi\routing.py", line 1764, in _handle_selected
-#     await route.handle(scope, receive, send)
-#   File "C:\Users\soham\OneDrive\Desktop\AgentOS\backend\.venv\Lib\site-packages\fastapi\routing.py", line 1753, in handle
-#     await self.original_router.handle(scope, receive, send)
-#   File "C:\Users\soham\OneDrive\Desktop\AgentOS\backend\.venv\Lib\site-packages\fastapi\routing.py", line 2738, in handle
-#     await included_router._handle_selected(scope, receive, send)
-#   File "C:\Users\soham\OneDrive\Desktop\AgentOS\backend\.venv\Lib\site-packages\fastapi\routing.py", line 1773, in _handle_selected
-#     await original_route.handle(scope, receive, send)
-#   File "C:\Users\soham\OneDrive\Desktop\AgentOS\backend\.venv\Lib\site-packages\fastapi\routing.py", line 1264, in handle
-#     await app(scope, receive, send)
-#   File "C:\Users\soham\OneDrive\Desktop\AgentOS\backend\.venv\Lib\site-packages\fastapi\routing.py", line 150, in app
-#     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-#   File "C:\Users\soham\OneDrive\Desktop\AgentOS\backend\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-#     raise exc
-#   File "C:\Users\soham\OneDrive\Desktop\AgentOS\backend\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-#     await app(scope, receive, sender)
-#   File "C:\Users\soham\OneDrive\Desktop\AgentOS\backend\.venv\Lib\site-packages\fastapi\routing.py", line 136, in app
-#     response = await f(request)
-#                ^^^^^^^^^^^^^^^^
-#   File "C:\Users\soham\OneDrive\Desktop\AgentOS\backend\.venv\Lib\site-packages\fastapi\routing.py", line 690, in app
-#     raw_response = await run_endpoint_function(
-#                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-#   File "C:\Users\soham\OneDrive\Desktop\AgentOS\backend\.venv\Lib\site-packages\fastapi\routing.py", line 344, in run_endpoint_function
-#     return await dependant.call(**values)
-#            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-#   File "C:\Users\soham\OneDrive\Desktop\AgentOS\backend\app\api\v1\endpoints\agents.py", line 99, in update_agent
-#     return await service.update_agent(
-#                  ^^^^^^^^^^^^^^^^^^^^^
-# TypeError: AgentService.update_agent() missing 2 required positional arguments: 'agent_data' and 'current_user'
+        agent = await self.get_agent_by_id(
+            agent_id,
+            current_user,
+        )
+
+        # Create/ load conversation history
+        if conversation_id is None:
+            conversation = Conversation(
+                agent_id=agent.id,
+            )
+            conversation = await self.conversation_repository.create_conversation(
+                conversation,
+            )
+        else:
+            conversation = (
+                await self.conversation_repository.get_conversation_by_id(
+                    conversation_id,
+                )
+            )
+
+            if conversation is None:
+                raise ValueError("Conversation not found.")
+
+        # save user msg
+        await self.message_repository.create_message(
+            Message(
+                conversation_id=conversation.id,
+                role="user",
+                content=message,
+            )
+        )
+
+        # load history
+        history = await self.message_repository.get_conversation_messages(
+            conversation.id,
+        )
+
+        # Build prompt
+        prompt = f"You are {agent.name}\n\n"
+
+        if agent.description:
+            prompt += f"{agent.description}\n\n"
+
+        prompt += "Conversation:\n"
+
+        for msg in history:
+            prompt += f"{msg.role}: {msg.content}\n"
+
+        # generate AI response
+        provider = GeminiProvider()
+        llm_service = LLMService(provider)
+
+        ai_response = await llm_service.generate_response(prompt)
+
+        # save assistant msg
+        await self.message_repository.create_message(
+            Message(
+                conversation_id=conversation.id,
+                role="assistant",
+                content=ai_response,
+            )
+        )
+
+        return conversation.id, ai_response
+
+
+#  "id": "1068c8b3-83dd-4baa-ac0b-40b73aab31e3",
+
+#   "name": "Research Assistant",
+
+#   "description": "Helps answer questions and summarize documents",
+
+#   "model": "gemini-3.5-flash",
+
+#   "owner_id": "609632c8-f558-4be8-8b11-9d3f1639cba8",
+
+#   "created_at": "2026-08-01T23:50:29.777139Z",
+
+#   "updated_at": "2026-08-01T23:50:29.777139Z"
+
+# # User Message
+#       │
+#       ▼
+# Create Conversation (if new)
+#       │
+#       ▼
+# Save User Message
+#       │
+#       ▼
+# Load All Previous Messages
+#       │
+#       ▼
+# Build Prompt
+#       │
+#       ▼
+# Gemini
+#       │
+#       ▼
+# Save Assistant Message
+#       │
+#       ▼
+# Return Response
+# "conversation_id": "85422d93-6ae0-4d13-968f-cb5b86a943da",
+#   "response": "That's awesome! As your Research Assistant, I'd love to help you dive deeper into their content. \n\nIf you'd like, I can:\n1. **Summarize their videos** (if you paste a transcript or share the main points of a specific video).\n2. **Research topics** they frequently cover (like gaming, retro culture, or Star Wars/LEGO, depending on their latest focus).\n3. **Find similar creators** or recommendations based on what you enjoy about their channel.\n\nHow can I help you today?"
+# }

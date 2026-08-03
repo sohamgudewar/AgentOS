@@ -45,3 +45,9 @@ class Agent(Base, TimestampMixin):
         "User",
         back_populates="agents",
     )
+
+    conversations = relationship(
+        "Conversation",
+        back_populates="agent",
+        cascade="all, delete-orphan",
+    )
