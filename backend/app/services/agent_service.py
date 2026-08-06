@@ -16,10 +16,12 @@
 
 from uuid import UUID
 
+from app.llm.embedding_service import EmbeddingService
 from app.models.message import Message
 from app.models.conversation import Conversation
 from app.models.agent import Agent
 from app.models.user import User
+from app.repositories.chunk_repository import ChunkRepository
 from app.repositories.agent_repository import AgentRepository
 from app.schemas.agent import AgentCreate, AgentUpdate
 
@@ -27,6 +29,8 @@ from app.llm.gemini_provider import GeminiProvider
 from app.llm.service import LLMService
 from app.repositories.conversation_repository import ConversationRepository
 from app.repositories.message_repository import MessageRepository
+
+from collections.abc import AsyncGenerator
 
 
 class AgentService:
@@ -37,10 +41,16 @@ class AgentService:
         agent_repository: AgentRepository,
         conversation_repository: ConversationRepository,
         message_repository: MessageRepository,
+        chunk_repository: ChunkRepository,
     ):
         self.agent_repository = agent_repository
         self.conversation_repository = conversation_repository
         self.message_repository = message_repository
+        self.chunk_repository = chunk_repository
+
+        provider = GeminiProvider()
+        self.llm_service = LLMService(provider)
+        self.embedding_service = EmbeddingService()
 
     async def create_agent(
         self,
@@ -171,8 +181,27 @@ class AgentService:
             conversation.id,
         )
 
+        query_embedding = await self.embedding_service.embed(message)
+
+        relevant_chunks = await self.chunk_repository.search_similar_chunks(
+            agent_id=agent.id,
+            query_embedding=query_embedding,
+            limit=5,
+        )
+
+        document_context = "\n\n".join(
+            chunk.content for chunk in relevant_chunks
+        )
+
         # Build prompt
         prompt = f"You are {agent.name}\n\n"
+
+        if document_context:
+            prompt += (
+                "Use the following document context when answering."
+                "If the answer is not in the context, say that clearly.\n\n"
+                f"Document context:\n{document_context}\n\n"
+            )
 
         if agent.description:
             prompt += f"{agent.description}\n\n"
@@ -183,10 +212,7 @@ class AgentService:
             prompt += f"{msg.role}: {msg.content}\n"
 
         # generate AI response
-        provider = GeminiProvider()
-        llm_service = LLMService(provider)
-
-        ai_response = await llm_service.generate_response(prompt)
+        ai_response = await self.llm_service.generate_response(prompt)
 
         # save assistant msg
         await self.message_repository.create_message(
@@ -200,6 +226,108 @@ class AgentService:
         return conversation.id, ai_response
 
 
+    async def stream_chat_with_agent(
+        self,
+        agent_id: UUID,
+        message: str,
+        current_user: User,
+        conversation_id: UUID | None = None,
+    ) -> AsyncGenerator[str, None]:
+        """Chat with an AI agent, while maintaining conversation history."""
+
+        agent = await self.get_agent_by_id(
+            agent_id,
+            current_user,
+        )
+
+        # Create/ load conversation history
+        if conversation_id is None:
+            conversation = Conversation(
+                agent_id=agent.id,
+            )
+            conversation = await self.conversation_repository.create_conversation(
+                conversation,
+            )
+        else:
+            conversation = (
+                await self.conversation_repository.get_conversation_by_id(
+                    conversation_id,
+                )
+            )
+
+            if conversation is None:
+                raise ValueError("Conversation not found.")
+
+        # save user msg
+        await self.message_repository.create_message(
+            Message(
+                conversation_id=conversation.id,
+                role="user",
+                content=message,
+            )
+        )
+
+        # load history
+        history = await self.message_repository.get_conversation_messages(
+            conversation.id,
+        )
+
+        query_embedding = await self.embedding_service.embed(message)
+
+        relevant_chunks = await self.chunk_repository.search_similar_chunks(
+            agent_id=agent.id,
+            query_embedding=query_embedding,
+            limit=5,
+        )
+
+        document_context = "\n\n".join(
+            chunk.content for chunk in relevant_chunks
+        )
+
+        # Build prompt
+        prompt = f"You are {agent.name}\n\n"
+
+        if document_context:
+            prompt += (
+        "Use the following document context when answering. "
+        "If the answer is not in the context, say that clearly.\n\n"
+        f"Document context:\n{document_context}\n\n"
+        )
+
+        if agent.description:
+            prompt += f"{agent.description}\n\n"
+
+        prompt += "Conversation:\n"
+
+        for msg in history:
+            prompt += f"{msg.role}: {msg.content}\n"
+
+        # generate AI response
+        full_response = ""
+
+        async for chunk in self.llm_service.generate_stream(prompt):
+            full_response += chunk
+            yield chunk
+
+        # save assistant msg
+        await self.message_repository.create_message(
+            Message(
+                conversation_id=conversation.id,
+                role="assistant",
+                content=full_response,
+            )
+        )
+
+
+# {
+#   "id": "46b81e98-c1f8-41b4-a026-dd2a4af55ff4",
+#   "name": "RAG Assistant",
+#   "description": "Answers questions from uploaded documents",
+#   "model": "gemini-3.5-flash",
+#   "owner_id": "dd317514-e184-4602-91d1-aa0c5aa57d2b",
+#   "created_at": "2026-08-06T05:00:58.312407Z",
+#   "updated_at": "2026-08-06T05:00:58.312407Z"
+# }
 #  "id": "1068c8b3-83dd-4baa-ac0b-40b73aab31e3",
 
 #   "name": "Research Assistant",

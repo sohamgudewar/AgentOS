@@ -12,8 +12,15 @@ class LLMService:
 
     async def generate_response(
         self,
-        prompt: str
+        prompt: str,
     ) -> str:
-        """Generate a response from the LLM provider, based on the given prompt."""
-
+        """Generate a complete response from the LLM provider."""
         return await self.provider.generate(prompt)
+
+    async def generate_stream(
+        self,
+        prompt: str,
+    ):
+        """Stream a response from the LLM provider."""
+        async for chunk in self.provider.generate_stream(prompt):
+            yield chunk

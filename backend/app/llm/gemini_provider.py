@@ -25,4 +25,19 @@ class GeminiProvider(LLMProvider):
 
         return response.text
 
+    async def generate_stream(
+            self,
+            prompt: str,
+    ):
+        """Stream a response from Gemini."""
+
+        response = self.client.models.generate_content_stream(
+            model="gemini-3.5-flash",
+            contents=prompt,
+        )
+
+        for chunk in response:
+            if chunk.text:
+                yield chunk.text
+
 # eddie
