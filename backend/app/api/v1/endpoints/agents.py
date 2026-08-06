@@ -4,6 +4,7 @@ from fastapi.responses import StreamingResponse
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.dependencies.services import get_agent_service, get_document_service
 from app.repositories.conversation_repository import ConversationRepository
 from app.repositories.document_repository import DocumentRepository
 from app.services.document_service import DocumentService
@@ -33,21 +34,22 @@ router = APIRouter(
 async def create_agent(
     agent_data: AgentCreate,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    service: AgentService = Depends(get_agent_service),
+    # db: AsyncSession = Depends(get_db),
 ):
     """Create a new AI agent."""
 
-    agent_repository = AgentRepository(db)
-    conversation_repository = ConversationRepository(db)
-    message_repository = MessageRepository(db)
-    chunk_repository = ChunkRepository(db)
+    # agent_repository = AgentRepository(db)
+    # conversation_repository = ConversationRepository(db)
+    # message_repository = MessageRepository(db)
+    # chunk_repository = ChunkRepository(db)
 
-    service = AgentService(
-        agent_repository,
-        conversation_repository,
-        message_repository,
-        chunk_repository,
-    )
+    # service = AgentService(
+    #     agent_repository,
+    #     conversation_repository,
+    #     message_repository,
+    #     chunk_repository,
+    # )
 
     return await service.create_agent(
         agent_data,
@@ -61,21 +63,9 @@ async def create_agent(
 )
 async def get_my_agents(
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    service: AgentService = Depends(get_agent_service),
 ):
     """Return all agents belonging to the authenticated user."""
-
-    agent_repository = AgentRepository(db)
-    conversation_repository = ConversationRepository(db)
-    message_repository = MessageRepository(db)
-    chunk_repository = ChunkRepository(db)
-
-    service = AgentService(
-        agent_repository,
-        conversation_repository,
-        message_repository,
-        chunk_repository,
-    )
 
     return await service.get_my_agents(current_user)
 
@@ -87,21 +77,9 @@ async def get_my_agents(
 async def get_agent_by_id(
     agent_id: UUID,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    service: AgentService = Depends(get_agent_service),
 ):
     """Return a single agent owned by authenticated user."""
-
-    agent_repository = AgentRepository(db)
-    conversation_repository = ConversationRepository(db)
-    message_repository = MessageRepository(db)
-    chunk_repository = ChunkRepository(db)
-
-    service = AgentService(
-        agent_repository,
-        conversation_repository,
-        message_repository,
-        chunk_repository,
-    )
 
     try:
         return await service.get_agent_by_id(
@@ -124,21 +102,9 @@ async def update_agent(
     agent_id: UUID,
     agent_data: AgentUpdate,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    service: AgentService = Depends(get_agent_service),
 ):
     """Update an existing agent."""
-
-    agent_repository = AgentRepository(db)
-    conversation_repository = ConversationRepository(db)
-    message_repository = MessageRepository(db)
-    chunk_repository = ChunkRepository(db)
-
-    service = AgentService(
-        agent_repository,
-        conversation_repository,
-        message_repository,
-        chunk_repository,
-    )
 
     try:
         return await service.update_agent(
@@ -161,21 +127,9 @@ async def update_agent(
 async def delete_agent(
     agent_id: UUID,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    service: AgentService = Depends(get_agent_service),
 ):
     """Delete an existing agent."""
-
-    agent_repository = AgentRepository(db)
-    conversation_repository = ConversationRepository(db)
-    message_repository = MessageRepository(db)
-    chunk_repository = ChunkRepository(db)
-
-    service = AgentService(
-        agent_repository,
-        conversation_repository,
-        message_repository,
-        chunk_repository,
-    )
 
     try:
         await service.delete_agent(
@@ -198,21 +152,9 @@ async def chat_with_agent(
     agent_id: UUID,
     chat_request: ChatRequest,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    service: AgentService = Depends(get_agent_service),
 ):
     """Chat with an AI agent."""
-
-    agent_repository = AgentRepository(db)
-    conversation_repository = ConversationRepository(db)
-    message_repository = MessageRepository(db)
-    chunk_repository = ChunkRepository(db)
-
-    service = AgentService(
-        agent_repository,
-        conversation_repository,
-        message_repository,
-        chunk_repository,
-    )
 
     try:
         conversation_id, response = await service.chat_with_agent(
@@ -242,19 +184,9 @@ async def upload_document(
     agent_id: UUID,
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    service: DocumentService = Depends(get_document_service),
 ):
     """Upload a document to an agent."""
-
-    repository = DocumentRepository(db)
-    chunk_repository = ChunkRepository(db)
-    agent_repository = AgentRepository(db)
-
-    service = DocumentService(
-        repository,
-        chunk_repository,
-        agent_repository,
-    )
 
     try:
         return await service.upload_document(
@@ -285,20 +217,20 @@ async def stream_chat_with_agent(
     agent_id: UUID,
     chat_request: ChatRequest,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    service: AgentService = Depends(get_agent_service),
 ):
     try:
-        agent_repository = AgentRepository(db)
-        conversation_repository = ConversationRepository(db)
-        message_repository = MessageRepository(db)
-        chunk_repository = ChunkRepository(db)
+        # agent_repository = AgentRepository(db)
+        # conversation_repository = ConversationRepository(db)
+        # message_repository = MessageRepository(db)
+        # chunk_repository = ChunkRepository(db)
 
-        service = AgentService(
-            agent_repository,
-            conversation_repository,
-            message_repository,
-            chunk_repository,
-        )
+        # service = AgentService(
+        #     agent_repository,
+        #     conversation_repository,
+        #     message_repository,
+        #     chunk_repository,
+        # )
 
         stream = service.stream_chat_with_agent(
             agent_id=agent_id,
@@ -326,17 +258,8 @@ async def stream_chat_with_agent(
 async def get_agent_documents(
     agent_id: UUID,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    service: DocumentService = Depends(get_document_service),
 ):
-    repository = DocumentRepository(db)
-    chunk_repository = ChunkRepository(db)
-    agent_repository = AgentRepository(db)
-
-    service = DocumentService(
-        repository,
-        chunk_repository,
-        agent_repository,
-    )
 
     try:
         return await service.get_agent_documents(
@@ -366,17 +289,8 @@ async def get_agent_documents(
 async def delete_document(
     document_id: UUID,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    service: DocumentService = Depends(get_document_service),
 ):
-    repository = DocumentRepository(db)
-    chunk_repository = ChunkRepository(db)
-    agent_repository = AgentRepository(db)
-
-    service = DocumentService(
-        repository,
-        chunk_repository,
-        agent_repository,
-    )
 
     try:
         await service.delete_document(
