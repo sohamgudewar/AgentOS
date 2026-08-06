@@ -35,15 +35,20 @@ class DocumentService:
         current_user: User,
     ) -> Document:
 
-        agent = await self.agent_repository.get_agent_by_id(agent_id)
+        await self._get_owned_agent(
+            agent_id,
+            current_user,
+        )
 
-        if agent is None:
-            raise ValueError("Agent not found.")
+        # agent = await self.agent_repository.get_agent_by_id(agent_id)
 
-        if agent.owner_id != current_user.id:
-            raise ValueError(
-                "You do not have permission to upload documents to this agent."
-            )
+        # if agent is None:
+        #     raise ValueError("Agent not found.")
+
+        # if agent.owner_id != current_user.id:
+        #     raise ValueError(
+        #         "You do not have permission to upload documents to this agent."
+        #     )
 
         upload_dir = Path("uploads/documents")
         upload_dir.mkdir(parents=True, exist_ok=True)
@@ -94,15 +99,11 @@ class DocumentService:
             agent_id: UUID,
             current_user: User,
     ) -> list[Document]:
-        agent = await self.agent_repository.get_agent_by_id(agent_id)
 
-        if agent is None:
-            raise ValueError("Agent not found.")
-
-        if agent.owner_id != current_user.id:
-            raise ValueError(
-                "You do not have permission to view documents for this agent."
-            )
+        await self._get_owned_agent(
+            agent_id,
+            current_user,
+        )
 
         return await self.document_repository.get_documents_by_agent(
             agent_id,
@@ -113,6 +114,7 @@ class DocumentService:
             document_id: UUID,
             current_user: User,
     ) -> None:
+
         document = await self.document_repository.get_document_by_id(
             document_id,
         )
@@ -120,17 +122,10 @@ class DocumentService:
         if document  is None:
             raise ValueError("Document not found.")
 
-        agent = await self.agent_repository.get_agent_by_id(
-            document.agent_id,
+        await self._get_owned_agent(
+            agent_id,
+            current_user,
         )
-
-        if agent is None:
-            raise ValueError("Agent not found.")
-
-        if agent.owner_id != current_user.id:
-            raise ValueError(
-                "You do not have permission to delete this document."
-            )
 
         await self.chunk_repository.delete_chunks_by_document(
             document_id,
@@ -143,3 +138,20 @@ class DocumentService:
         await self.document_repository.delete_document(
             document,
         )
+
+    async def _get_owned_agent(
+    self,
+    agent_id: UUID,
+    current_user: User,
+):
+        agent = await self.agent_repository.get_agent_by_id(agent_id)
+
+        if agent is None:
+            raise ValueError("Agent not found.")
+
+        if agent.owner_id != current_user.id:
+            raise ValueError(
+                "You do not have permission to access this agent."
+        )
+
+        return agent
