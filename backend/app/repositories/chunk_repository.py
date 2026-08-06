@@ -1,5 +1,5 @@
 from uuid import UUID
-from sqlalchemy import select
+from sqlalchemy import select, delete
 
 from app.models.chunk import Chunk
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -48,3 +48,15 @@ class ChunkRepository:
         )
 
         return list(result.scalars().all())
+
+    async def delete_chunks_by_document(
+            self,
+            document_id: UUID,
+    ) -> None:
+        await self.db.execute(
+            delete(Chunk).where(
+                Chunk.document_id == document_id,
+            )
+        )
+
+        await self.db.commit()

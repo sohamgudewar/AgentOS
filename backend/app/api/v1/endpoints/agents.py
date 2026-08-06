@@ -241,22 +241,41 @@ async def chat_with_agent(
 async def upload_document(
     agent_id: UUID,
     file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Upload a document to an agent."""
 
     repository = DocumentRepository(db)
     chunk_repository = ChunkRepository(db)
+    agent_repository = AgentRepository(db)
 
     service = DocumentService(
         repository,
         chunk_repository,
+        agent_repository,
     )
 
-    return await service.upload_document(
-        agent_id,
-        file,
-    )
+    try:
+        return await service.upload_document(
+            agent_id,
+            file,
+            current_user,
+        )
+
+    except ValueError as e:
+        detail = str(e)
+
+        if detail == "Agent not found.":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=detail,
+            )
+
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=detail,
+        )
 
 
 @router.post(
@@ -297,4 +316,87 @@ async def stream_chat_with_agent(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
+        )
+
+
+@router.get(
+    "/{agent_id}/documents",
+    response_model=list[DocumentResponse],
+)
+async def get_agent_documents(
+    agent_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    repository = DocumentRepository(db)
+    chunk_repository = ChunkRepository(db)
+    agent_repository = AgentRepository(db)
+
+    service = DocumentService(
+        repository,
+        chunk_repository,
+        agent_repository,
+    )
+
+    try:
+        return await service.get_agent_documents(
+            agent_id,
+            current_user,
+        )
+
+    except ValueError as e:
+        detail= str(e)
+
+        if detail == "Agent not found.":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=detail,
+            )
+
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=detail,
+        )
+
+
+@router.delete(
+    "/documents/{document_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_document(
+    document_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    repository = DocumentRepository(db)
+    chunk_repository = ChunkRepository(db)
+    agent_repository = AgentRepository(db)
+
+    service = DocumentService(
+        repository,
+        chunk_repository,
+        agent_repository,
+    )
+
+    try:
+        await service.delete_document(
+            document_id,
+            current_user,
+        )
+
+    except ValueError as e:
+        detail = str(e)
+
+        if detail in (
+            "Document not found.",
+            "Agent not found.",
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=detail,
+            )
+
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=detail,
         )
