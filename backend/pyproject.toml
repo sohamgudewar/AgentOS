@@ -21,3 +21,13 @@ dependencies = [
     "sqlalchemy>=2.0.51",
     "uvicorn>=0.39.0",
 ]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
