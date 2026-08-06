@@ -1,4 +1,3 @@
-from fastapi import FastAPI
 from fastapi import APIRouter
 from app.core.constants import HEALTH_OK
 from app.core.logger import logger

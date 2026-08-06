@@ -2,22 +2,14 @@ from uuid import UUID
 
 from fastapi.responses import StreamingResponse
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.api.dependencies.services import get_agent_service, get_document_service
-from app.repositories.conversation_repository import ConversationRepository
-from app.repositories.document_repository import DocumentRepository
 from app.services.document_service import DocumentService
 from app.schemas.document import DocumentResponse
-from app.repositories.message_repository import MessageRepository
 from app.auth.dependencies import get_current_user
-from app.database.session import get_db
 from app.models.user import User
-from app.repositories.agent_repository import AgentRepository
 from app.schemas.agent import AgentCreate, AgentResponse, AgentUpdate
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.services.agent_service import AgentService
-from app.repositories.chunk_repository import ChunkRepository
 
 
 router = APIRouter(
@@ -35,21 +27,8 @@ async def create_agent(
     agent_data: AgentCreate,
     current_user: User = Depends(get_current_user),
     service: AgentService = Depends(get_agent_service),
-    # db: AsyncSession = Depends(get_db),
 ):
     """Create a new AI agent."""
-
-    # agent_repository = AgentRepository(db)
-    # conversation_repository = ConversationRepository(db)
-    # message_repository = MessageRepository(db)
-    # chunk_repository = ChunkRepository(db)
-
-    # service = AgentService(
-    #     agent_repository,
-    #     conversation_repository,
-    #     message_repository,
-    #     chunk_repository,
-    # )
 
     return await service.create_agent(
         agent_data,
@@ -220,17 +199,6 @@ async def stream_chat_with_agent(
     service: AgentService = Depends(get_agent_service),
 ):
     try:
-        # agent_repository = AgentRepository(db)
-        # conversation_repository = ConversationRepository(db)
-        # message_repository = MessageRepository(db)
-        # chunk_repository = ChunkRepository(db)
-
-        # service = AgentService(
-        #     agent_repository,
-        #     conversation_repository,
-        #     message_repository,
-        #     chunk_repository,
-        # )
 
         stream = service.stream_chat_with_agent(
             agent_id=agent_id,
